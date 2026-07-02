@@ -21,7 +21,7 @@ export class BuyerModel {
     if (data.phone !== undefined) {
       this.phone = data.phone;
     }
-  };
+  }
 
   getData(): IBuyer {
     return {
@@ -30,14 +30,14 @@ export class BuyerModel {
       email: this.email,
       phone: this.phone
     };
-  };
+  }
 
   clear(): void {
       this.payment = null;
       this.address = '';
       this.email = '';
       this.phone = '';
-    };
+    }
   
   validate(): TBuyerErrors {
     const errors: TBuyerErrors = {};
@@ -48,5 +48,5 @@ export class BuyerModel {
     if (!this.phone.trim()) errors.phone = 'Введите телефон';
 
     return errors;
-  };
+  }
 }
