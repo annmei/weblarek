@@ -24,4 +24,4 @@ export class Success extends Component<ISuccess> {
   set total(value: number) {
     this.successDescription.textContent = `Списано ${value} синапсов`;
   }
-}
+} 

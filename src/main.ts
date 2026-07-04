@@ -12,10 +12,12 @@ import { Gallery } from './components/view/Gallery';
 import { Modal } from './components/view/Modal';
 import { Basket } from './components/view/Basket';
 import { Success } from './components/view/Success';
-import { apiProducts } from './utils/data';
-import { OrderForm, ContactsForm } from './components/view/Form';
-import { CardCatalog, CardFull, CardBasket } from './components/view/Card';
 import { TPayment } from './types';
+import { CardBasket } from './components/view/CardBasket';
+import { CardCatalog } from './components/view/CardCatalog';
+import { CardFull } from './components/view/CardFull';
+import { OrderForm } from './components/view/OrderForm';
+import { ContactsForm } from './components/view/ContactsForm';
 
 
 const events = new EventEmitter()
@@ -50,6 +52,34 @@ header.render({
   counter: cartModel.getItemsCount()
 })
 
+//Функция для рендера корзины
+function renderBasket(): void {
+  const basketItems = cartModel.getItems().map((product, index) => {
+    const cardElement = cloneTemplate<HTMLButtonElement>(cardBasketTemplate);
+    const card = new CardBasket(cardElement, {
+      onDelete: () => {
+        events.emit('basket:item-delete', { id: product.id });
+      }
+    });
+    return card.render({
+      ...product,
+      index: index + 1
+    });
+  });
+
+  const basketItemsCount = cartModel.getItemsCount();
+  const isBasketEmpty = basketItemsCount === 0;
+
+  basket.render({
+    items: basketItems,
+    total: cartModel.getTotalPrice(),
+    buttonDisabled: isBasketEmpty
+  });
+}
+
+//Устанавливаем начальное состояние корзины
+renderBasket();
+
 //Получаем список товаров с сервера
 communication.getProducts()
   .then((data) => {
@@ -73,7 +103,7 @@ events.on('catalog:changed', () => {
   gallery.render({items: cards});
 })
 
-// Обрабатываем выбор карточки товара
+// Обрабатываем нажатие на карточку товара
 events.on('card:select', (data: { id: string }) => {
   const product = catalogModel.getProductById(data.id);
 
@@ -95,10 +125,10 @@ events.on('product:selected', () => {
     
     onButtonClick: () => {
       if (inBasket) {
-      events.emit('basket:item-delete', { id: product.id });
+      events.emit('basket:delete');
       }
       else {
-      events.emit('basket:add', { id: product.id });
+      events.emit('basket:add');
       }
       modal.close();
     }
@@ -113,7 +143,7 @@ events.on('product:selected', () => {
       : inBasket
         ? 'Удалить из корзины'
         : 'В корзину',
-      buttonDisable: isUnavailable
+      buttonDisabled: isUnavailable
     })
   });
 
@@ -121,9 +151,19 @@ events.on('product:selected', () => {
 
 })
 
-// Обрабатываем добавление товара в корзину
-events.on('basket:add', (data: { id: string }) => {
-  const product = catalogModel.getProductById(data.id);
+// Обрабатываем нажатие на кнопку "Удалить из корзины" в окне отображения выбранного товара
+events.on('basket:delete', () => {
+  const product = catalogModel.getSelectedProduct();
+
+  if (!product) return;
+
+  cartModel.removeItem(product);
+
+})
+
+// Обрабатываем нажатие на кнопку "В корзину" в окне отображения выбранного товара
+events.on('basket:add', () => {
+  const product = catalogModel.getSelectedProduct();
 
   if (!product) return;
 
@@ -133,28 +173,13 @@ events.on('basket:add', (data: { id: string }) => {
 
 // Обрабатываем изменение корзины
 events.on('basket:changed', () => {
-  const basketItems = cartModel.getItems().map((product, index) => {
-    const cardElement = cloneTemplate<HTMLButtonElement>(cardBasketTemplate);
-    const card = new CardBasket(cardElement, {
-      onDelete: () => {
-        events.emit('basket:item-delete', { id: product.id });
-      }
-    });
-    return card.render({
-      ...product,
-      index: index + 1
-    });
-  });
   header.render({
     counter: cartModel.getItemsCount()
   });
-  basket.render({
-    items: basketItems,
-    total: cartModel.getTotalPrice()
-  });
+  renderBasket();
 })
 
-// Обрабатываем удаление товара из корзины
+// Обрабатываем нажатие на кнопку удаления товара из корзины в окне корзины
 events.on('basket:item-delete', (data: { id: string }) => {
   const product = catalogModel.getProductById(data.id);
 
@@ -164,7 +189,7 @@ events.on('basket:item-delete', (data: { id: string }) => {
 
 })
 
-// Обрабатываем открытие корзины
+// Обрабатываем нажатие на кнопку корзины
 events.on('basket:open', () => {
 
   modal.render({
@@ -175,7 +200,7 @@ events.on('basket:open', () => {
 
 })
 
-// Обрабатываем переход к форме заказа
+// Обрабатываем нажатие кнопки "Оформить" в окне корзины
 events.on('basket:submit', () => {
   modal.render({
     content: orderForm.render({
@@ -188,7 +213,7 @@ events.on('basket:submit', () => {
   modal.open()
 })
 
-// Обрабатываем выбор способа оплаты
+// Обрабатываем изменение выбора способа оплаты
 events.on('order.payment:change', (data: { payment: TPayment }) => {
   buyerModel.update({
     payment: data.payment
@@ -221,18 +246,8 @@ events.on('buyer:changed', () => {
   });
 });
 
-//Обрабатываем отправку формы заказа
+//Обрабатываем нажатие кнопки "Далее" в форме оформления заказа
 events.on('order:submit', () => {
-  const errors = buyerModel.validate();
-
-  if (errors.payment || errors.address) {
-    orderForm.render({
-      ...buyerModel.getData(),
-      valid: false,
-      errors: errors.payment || errors.address || ''
-    });
-    return;
-  }
   modal.render({
     content: contactsForm.render({
       ...buyerModel.getData(),
@@ -256,18 +271,8 @@ events.on('contacts.phone:change', (data: { phone: string }) => {
   });
 });
 
-//Обрабатываем отправку формы контактов 
+//Обрабатываем нажатие кнопки "Оплатить" в форме оформления заказа 
 events.on('contacts:submit', () => {
-  const errors = buyerModel.validate();
-
-  if (errors.email || errors.phone) {
-    contactsForm.render({
-      ...buyerModel.getData(),
-      valid: false,
-      errors: errors.email || errors.phone || ''
-    });
-    return;
-  }
 
   //Отправляем заказ на сервер
   communication.createOrder({
@@ -289,7 +294,7 @@ events.on('contacts:submit', () => {
   });
 });
 
-//Обрабатываем закрытие окна успешного оформления заказа
+//Обрабатываем нажатие на кнопку "За новыми покупками!" в окне успешного оформления заказа
 events.on('success:close', () => {
   modal.close();
 });

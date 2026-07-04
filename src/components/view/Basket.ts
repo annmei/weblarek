@@ -1,7 +1,6 @@
 import { Component } from "../base/Component";
 import { ensureElement } from "../../utils/utils";
 import { IEvents } from "../base/Events";
-
 import { IBasket } from "../../types";
 
 export class Basket extends Component<IBasket> {
@@ -27,5 +26,9 @@ export class Basket extends Component<IBasket> {
 
   set total(value: number) {
     this.basketPrice.textContent = `${value} синапсов`;
+  }
+
+  set buttonDisabled(value: boolean) {
+    this.basketButton.disabled = value;
   }
 }
