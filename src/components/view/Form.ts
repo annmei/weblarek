@@ -2,11 +2,8 @@ import { Component } from "../base/Component";
 import { ensureElement } from "../../utils/utils";
 import { IEvents } from "../base/Events";
 import type { TPayment } from "../../types";
+import { IFormState, IOrderForm, IContactsForm } from '../../types';
 
-export interface IFormState {
-  valid: boolean;
-  errors: string;
-}
 
 export abstract class FormBase<T> extends Component<T & IFormState> {
   protected form: HTMLFormElement;
@@ -31,11 +28,6 @@ export abstract class FormBase<T> extends Component<T & IFormState> {
     set errors(value: string) {
       this.formErrors.textContent = value;
     }
-}
-
-export interface IOrderForm {
-  payment: TPayment | null;
-  address: string;
 }
 
 export class OrderForm extends FormBase<IOrderForm> {
@@ -80,10 +72,6 @@ export class OrderForm extends FormBase<IOrderForm> {
   }
 }
 
-export interface IContactsForm {
-  email: string;
-  phone: string;
-}
 
 export class ContactsForm extends FormBase<IContactsForm> {
   protected emailInput: HTMLInputElement;
