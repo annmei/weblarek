@@ -46,6 +46,7 @@ const basket = new Basket(cloneTemplate<HTMLElement>(basketTemplate), events);
 const orderForm = new OrderForm(cloneTemplate<HTMLFormElement>(orderTemplate), events);
 const contactsForm = new ContactsForm(cloneTemplate<HTMLFormElement>(contactsTemplate), events);
 const success = new Success(cloneTemplate<HTMLElement>(successTemplate), events);
+const cardFull = new CardFull(cloneTemplate<HTMLElement>(cardFullTemplate), events);
 
 //Устанавливаем начальное состояние счётчика корзины
 header.render({
@@ -120,22 +121,9 @@ events.on('product:selected', () => {
 
   const isUnavailable = product.price === null;
   const inBasket = cartModel.hasItem(product.id);
-  const cardElement = cloneTemplate<HTMLElement>(cardFullTemplate);
-  const card = new CardFull(cardElement, {
-    
-    onButtonClick: () => {
-      if (inBasket) {
-      events.emit('basket:delete');
-      }
-      else {
-      events.emit('basket:add');
-      }
-      modal.close();
-    }
-
-});
+ 
   modal.render({
-    content: card.render({
+    content: cardFull.render({
       ...product,
       inBasket,
       buttonText: isUnavailable
@@ -149,27 +137,22 @@ events.on('product:selected', () => {
 
   modal.open();
 
-})
+});
 
-// Обрабатываем нажатие на кнопку "Удалить из корзины" в окне отображения выбранного товара
-events.on('basket:delete', () => {
+// Обрабатываем нажатие на кнопку действия в окне просмотра товара
+events.on('card:action', () => {
   const product = catalogModel.getSelectedProduct();
 
   if (!product) return;
 
-  cartModel.removeItem(product);
+  if (cartModel.hasItem(product.id)) {
+    cartModel.removeItem(product);
+  } else {
+    cartModel.addItem(product);
+  }
 
-})
-
-// Обрабатываем нажатие на кнопку "В корзину" в окне отображения выбранного товара
-events.on('basket:add', () => {
-  const product = catalogModel.getSelectedProduct();
-
-  if (!product) return;
-
-  cartModel.addItem(product);
-
-})
+  modal.close();
+});
 
 // Обрабатываем изменение корзины
 events.on('basket:changed', () => {
@@ -202,12 +185,14 @@ events.on('basket:open', () => {
 
 // Обрабатываем нажатие кнопки "Оформить" в окне корзины
 events.on('basket:submit', () => {
+  const buyerData = buyerModel.getData();
+  const errors = buyerModel.validate();
   modal.render({
     content: orderForm.render({
-      payment: null,
-      address: '',
-      valid: false,
-      errors: ''
+      payment: buyerData.payment,
+      address: buyerData.address,
+      valid: !errors.payment && !errors.address,
+      errors: errors.payment || errors.address || ''
     })
   });
   modal.open()

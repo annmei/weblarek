@@ -2,8 +2,9 @@ import { ensureElement } from '../../utils/utils';
 import { categoryMap } from '../../utils/constants';
 import { setCategoryStyle } from '../../utils/utils';
 import { CDN_URL } from '../../utils/constants';
-import { TCardFullActions, ICardFull } from '../../types';
 import { CardBase } from './CardBase';
+import { IEvents } from '../base/Events';
+import { ICardFull } from '../../types';
 
 export class CardFull extends CardBase<ICardFull> {
   protected cardCategory: HTMLElement;
@@ -11,7 +12,7 @@ export class CardFull extends CardBase<ICardFull> {
   protected cardDescription: HTMLElement;
   protected cardButton: HTMLButtonElement;
 
-  constructor(container: HTMLElement, actions: TCardFullActions) {
+  constructor(container: HTMLElement, protected events: IEvents) {
     super(container);
 
     this.cardCategory = ensureElement<HTMLElement>(
@@ -31,7 +32,9 @@ export class CardFull extends CardBase<ICardFull> {
       this.container,
     );
 
-    this.cardButton.addEventListener('click', actions.onButtonClick);
+    this.cardButton.addEventListener('click', () => {
+      this.events.emit('card:action');
+    });
   }
 
   set category(value: string) {
